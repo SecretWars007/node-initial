@@ -1,6 +1,7 @@
 const express = require("express");
 const app = express();
 const usuarios = require("./usuarios");
+const authorizationToken = "Authorized 1234567"
 
 app.use(express.json());
 // Obtener todos los usuarios
@@ -75,5 +76,57 @@ app.delete("/usuarios/:id", (req, res) => {
     res.status(404).json({ message: "Usuario no encontrado" });
   }
 });
+
+//paginacion
+app.get("/usuarios", (req, res) => {
+  const { limit, page } = req.query;
+  const { authorization } = req.headers;
+  const isAuthorized = authorization === authorizationToken;
+
+  if (!isAuthorized) {
+    res.status(401).json({ message: "Unauthorized" });
+    return;
+  }
+
+  if (limit && page) {
+    const limitPage = parseInt(limit) * parseInt(page);
+    const offset = limitPage - parseInt(limit);
+    const data = usuarios.slice(offset, limitPage);
+    return res.status(200).json(data);
+  }
+
+  res.send(usuarios);
+});
+// get id con autorizacion toke
+app.get("/usuarios/:id", (req, res) => {
+  const { authorization } = req.headers;
+  const isAuthorized = authorization === authorizationToken;
+
+  if (!isAuthorized) {
+    res.status(401).json({ message: "Unauthorized" });
+    return;
+  }
+
+  const usuarioId = parseInt(req.params.id);
+  const usuario = usuarios.find((u) => u.id === usuarioId);
+
+  if (!usuario) return res.status(404).send("Usuario no encontrado");
+  res.status(200).json(usuario);
+});
+// post alta masiva de usuarios
+app.post("/bulk-usuarios", (req, res) => {
+  const { body } = req;
+  console.log(body);
+  usuarios.push(...body);
+  res.status(200).json(usuarios);
+});
+// delete masivo de usuarios
+app.delete("/bulk-usuarios", (req, res) => {
+  const { body } = req;
+  console.log(body);
+  usuarios.splice(0);
+  res.status(200).json(usuarios);
+});
+
 
 app.listen(5000, () => console.log("Server Running"));
